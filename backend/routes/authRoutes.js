@@ -75,6 +75,7 @@ router.post("/login", async (req, res) => {
     const ok = await user.comparePassword(password);
     if (!ok)
       return res.status(400).json({ message: "비밀번호가 올바르지 않습니다." });
+    
 
     // 4) 성공 시 유저 문서에 isLoggined = true, lastLoginAt = 현재시간 으로 업데이트한다.
     const updated = await User.findByIdAndUpdate(
