@@ -68,11 +68,11 @@ router.post("/login", async (req, res) => {
 
     const invalidMsg = { message: "이메일 또는 비밀번호가 올바르지 않습니다." };
 
-    // 3) 사용자 없음
+    // 3 사용자 없음
     if (!user) {
       return res.status(400).json({
         ...invalidMsg,
-        liginAttempts: null,
+        loginAttempts: null,
         remainingAttempts: null,
         locked: false,
       });
@@ -81,16 +81,18 @@ router.post("/login", async (req, res) => {
     // 4)비밀번호 검증 (User 모델에 comparePassword 메서드가 있다고 가정)
     const ok = await user.comparePassword(password);
 
-    // 5) 비밀번호 불일치
+    // 5)비밀번호 불일치
     if (!ok) {
       user.loginAttempts += 1;
 
       const remaining = Math.max(0, LOCK_MAX - user.loginAttempts);
 
-      // 5-1) 실패 누적 임계치 이상 일때 계정 잠금
+      // 5-1 실패 누적 임계치 이상 일때 계정 잠금
       if (user.loginAttempts >= LOCK_MAX) {
-        user.isActive = false;
+        user.isActive = false; //잠금처리
+
         await user.save();
+
         return res.status(423).json({
           message:
             "유효성 검증 실패로 계정이 잠겼습니다. 관리자에게 문의하세요.",
@@ -99,7 +101,7 @@ router.post("/login", async (req, res) => {
           locked: true,
         });
       }
-      // 5-2) 잠금 전 400 현재 실패 남은 횟수 안내
+      // 5-2 아직 잠금 전 400 현재 실패 남은 횟수 안내
       await user.save();
       return res.status(400).json({
         ...invalidMsg,
@@ -109,13 +111,15 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // 6) 로그인 성공: 실패 카운트 초기화 접속 정보 업데이트
+    // 6 로그인 성공: 실패 카운트 초기화 접속 정보 업데이트
+
     user.loginAttempts = 0;
     user.isLoggined = true;
     user.lastLoginAt = new Date();
+
     await user.save();
 
-    // 7) JWT 발급 및 쿠키 설정
+    // 7 JWT 발급 및 쿠키 설정
     const token = makeToken(user);
 
     res.cookie("token", token, {
@@ -125,13 +129,13 @@ router.post("/login", async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    // 8) 성공 응답: 사용자 정보 + 토큰 + 참조용 카운트
+    // 8 성공 응답: 사용자 정보 +토큰+ 참조용 카운트
     return res.status(200).json({
       user: user.toSafeJSON(),
       token,
       loginAttempts: 0,
       remainingAttempts: LOCK_MAX,
-      locked: fasle,
+      locked: false,
     });
   } catch (error) {
     return res.status(500).json({
