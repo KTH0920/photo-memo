@@ -1,15 +1,29 @@
-import React from "react";
+import React, { useState } from "react";
 import "./style/AuthPanel.scss";
 import AuthModal from "./AuthModal";
+
 const AuthPanel = ({
   isAuthed,
   user,
   me,
-  fetchMe,
+  onFetchMe,
   onLogout,
   onAuthed,
   requiredRole,
 }) => {
+  const [open, setOpen] = useState(false);
+  const hasRequiredRole = !requiredRole || (user && user.role == requiredRole);
+
+  if (open) {
+    return (
+      <AuthModal
+        open={open}
+        onClose={() => setOpen(false)}
+        onAuthed={onAuthed}
+      />
+    );
+  }
+
   return (
     <section className="container-sm admin-card">
       <header className="admin-head">
@@ -18,37 +32,45 @@ const AuthPanel = ({
       </header>
       {!isAuthed ? (
         <div className="auth-row">
-          <button className="btn btn-primary">로그인 / 회원가입</button>
+          {/* 로그인 전 */}
+          <button onClick={() => setOpen(true)} className="btn btn-primary">
+            로그인 / 회원가입
+          </button>
         </div>
       ) : (
         <div className="auth-row">
+          {/* 로그인 후 */}
           <span>
-            안녕하세요 <b>사용자 명 또는 이메일</b>{" "}
+            안녕하세요 <b>{user?.displayName || user?.email}</b>{" "}
           </span>
-          <span className="badge badge-ok">admin</span>
+          <span
+            className={`badge ${hasRequiredRole ? "badge-ok" : "badge-warn"} `}
+          >
+            {hasRequiredRole ? "admin" : `권한없음 : ${requiredRole} 필요`}
+          </span>
 
           <div className="auth-actions">
-            <button className="btn">/me 호출</button>
-            <button className="btn">로그아웃</button>
+            {hasRequiredRole && (
+              <button className="btn" onClick={onFetchMe}>
+                /me 호출
+              </button>
+            )}
+            <button className="btn" onClick={onLogout}>
+              로그아웃
+            </button>
           </div>
         </div>
       )}
 
       {/* 권한 없음 경고 */}
-      <div className="alert alert-warn">
-        현재 계정에는 관리자 권한이 없습니다. 관리자 승인이 필요합니다.
-      </div>
+      {!hasRequiredRole && (
+        <div className="alert alert-warn">
+          현재 계정에는 관리자 권한이 없습니다. 관리자 승인이 필요합니다.
+        </div>
+      )}
 
       {/* 사용자 정보 예시 */}
-      <pre className="code">
-        {`{
-      "id": "123",
-      "email": "test@example.com",
-      "role": "admin"
-       }`}
-      </pre>
-
-      <AuthModal />
+      {me && <pre className="code">{JSON.stringify(me, null, 2)}</pre>}
     </section>
   );
 };
